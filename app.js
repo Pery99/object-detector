@@ -1,110 +1,61 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
-const controls = document.getElementById("controls");
-let tryOnMode = "none";
+const resultsDiv = document.getElementById("results");
 
-// Load images for try-on (replace with real URLs or local paths)
-const glassesImg = new Image();
-glassesImg.src = "glasses.png"; // Placeholder - replace with real glasses PNG
-const hatImg = new Image();
-hatImg.src = "https://i.imgur.com/6Y6Y6Y6.png"; // Placeholder - replace with real hat PNG
+async function setupCamera() {
+  console.log("Setting up camera...");
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
+  return new Promise((resolve) => {
+    video.onloadedmetadata = () => {
+      console.log("Camera ready!");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      resolve(video);
+    };
+  });
+}
 
-function onResults(results) {
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+async function detectObjects() {
+  console.log("Loading model...");
+  const model = await cocoSsd.load();
+  console.log("Model loaded!");
+  await setupCamera();
 
-  if (results.detections) {
-    results.detections.forEach((detection) => {
-      const keypoints = detection.landmarks;
-      const leftEye = keypoints[1];
-      const rightEye = keypoints[0];
-      const nose = keypoints[2];
+  async function detectFrame() {
+    const predictions = await model.detect(video);
+    console.log("Predictions:", predictions);
+    context.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (tryOnMode === "glasses" && glassesImg.complete) {
-        // Calculate eye angle for rotation
-        const angle = Math.atan2(
-          rightEye.y - leftEye.y,
-          rightEye.x - leftEye.x
-        );
+    let resultsHTML = "<ul>";
+    predictions.forEach((prediction) => {
+      const { class: className, score, bbox } = prediction;
+      const confidence = Math.round(score * 100);
 
-        // Improved sizing calculations
-        const eyeDistance = Math.hypot(
-          leftEye.x - rightEye.x,
-          leftEye.y - rightEye.y
-        ) * canvas.width;
-        const glassesWidth = eyeDistance * 2.2; // Adjusted scale factor
-        const glassesHeight = glassesWidth * 0.35; // Adjusted aspect ratio
+      // Draw bounding box
+      context.beginPath();
+      context.rect(...bbox);
+      context.lineWidth = 2;
+      context.strokeStyle = "red";
+      context.stroke();
+      context.fillStyle = "white";
+      context.fillText(
+        `${className} (${confidence}%)`,
+        bbox[0],
+        bbox[1] > 10 ? bbox[1] - 5 : 10
+      );
 
-        // Improved positioning
-        const centerX = (leftEye.x + rightEye.x) / 2 * canvas.width;
-        const centerY = (leftEye.y + rightEye.y) / 2 * canvas.height;
-        const glassesX = centerX - glassesWidth / 2;
-        const glassesY = centerY - glassesHeight / 2;
-
-        // Apply rotation transform
-        context.save();
-        context.translate(centerX, centerY);
-        context.rotate(angle);
-        context.drawImage(
-          glassesImg,
-          -glassesWidth / 2,
-          -glassesHeight / 2,
-          glassesWidth,
-          glassesHeight
-        );
-        context.restore();
-
-      } else if (tryOnMode === "hat" && hatImg.complete) {
-        // Improved hat positioning and sizing
-        const faceWidth = Math.hypot(
-          leftEye.x - rightEye.x,
-          leftEye.y - rightEye.y
-        ) * canvas.width * 2.5;
-        
-        const hatWidth = faceWidth * 1.8;
-        const hatHeight = hatWidth * 0.6;
-        const hatX = nose.x * canvas.width - hatWidth / 2;
-        const hatY = (nose.y * canvas.height) - hatHeight * 1.2; // Move hat higher up
-
-        context.drawImage(hatImg, hatX, hatY, hatWidth, hatHeight);
-      }
+      // Add to results list
+      resultsHTML += `<li>${className} (${confidence}%)</li>`;
     });
+    resultsHTML += "</ul>";
+    resultsDiv.innerHTML = resultsHTML;
+
+    requestAnimationFrame(detectFrame);
   }
+
+  detectFrame();
 }
 
-async function setupApp() {
-  console.log("Loading face detection...");
-  const faceDetection = new FaceDetection({
-    locateFile: (file) => {
-      return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
-    },
-  });
-
-  faceDetection.setOptions({
-    selfieMode: true,
-    model: "short",
-    minDetectionConfidence: 0.5,
-  });
-
-  faceDetection.onResults(onResults);
-
-  const camera = new Camera(video, {
-    onFrame: async () => {
-      await faceDetection.send({ image: video });
-    },
-    width: 640,
-    height: 480,
-  });
-
-  await camera.start();
-  console.log("Camera started!");
-}
-
-// Handle try-on mode selection
-controls.addEventListener("change", (e) => {
-  tryOnMode = e.target.value;
-  console.log("Try-on mode:", tryOnMode);
-});
-
-setupApp().catch((err) => console.error("Error:", err));
+detectObjects().catch((err) => console.error("Error:", err));

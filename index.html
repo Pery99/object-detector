@@ -1,65 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Virtual Try-On</title>
+<head>
+    <meta charset="UTF-8">
+    <title>Object Detection Test</title>
     <style>
-      body {
-        margin: 0;
-        padding: 10px;
-        font-family: Arial, sans-serif;
-        display: flex;
-        gap: 20px;
-      }
-      .video-container {
-        position: relative;
-        width: 640px;
-        height: 480px;
-      }
-      video,
-      canvas {
-        width: 640px;
-        height: 480px;
-        position: absolute;
-        top: 0;
-        left: 0;
-      }
-      #controls {
-        width: 300px;
-        padding: 10px;
-        border: 1px solid #ccc;
-      }
-      #controls label {
-        display: block;
-        margin: 5px 0;
-      }
+        body { margin: 0; padding: 10px; font-family: Arial, sans-serif; display: flex; gap: 20px; }
+        .video-container { position: relative; width: 640px; height: 480px; }
+        video, canvas { width: 640px; height: 480px; position: absolute; top: 0; left: 0; }
+        #results { width: 300px; max-height: 480px; border: 1px solid #ccc; padding: 10px; }
+        #results ul { list-style-type: none; padding: 0; margin: 0; }
+        #results li { padding: 5px 0; }
     </style>
-    <script
-      src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
-      crossorigin="anonymous"
-    ></script>
-    <script
-      src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"
-      crossorigin="anonymous"
-    ></script>
-  </head>
-  <body>
+</head>
+<body>
     <div class="video-container">
-      <video id="video" autoplay></video>
-      <canvas id="canvas"></canvas>
+        <video id="video" autoplay></video>
+        <canvas id="canvas"></canvas>
     </div>
-    <div id="controls">
-      <h3>Try-On Options</h3>
-      <label
-        ><input type="radio" name="tryon" value="none" checked /> None</label
-      >
-      <label><input type="radio" name="tryon" value="glasses" /> Glasses</label>
-      <label><input type="radio" name="tryon" value="hat" /> Hat</label>
-    </div>
+    <div id="results"></div>
 
-    <!-- MediaPipe scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <script src="app.js"></script>
-  </body>
+</body>
 </html>
